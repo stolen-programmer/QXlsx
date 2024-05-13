@@ -192,6 +192,9 @@ public:
 private:
     void saveToXmlFile(QIODevice *device) const override;
     bool loadFromXmlFile(QIODevice *device) override;
+
+public:
+    const QList<CellRange> &editRegion() const;
 };
 
 QT_END_NAMESPACE_XLSX

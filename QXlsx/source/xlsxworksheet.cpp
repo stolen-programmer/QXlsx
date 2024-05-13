@@ -2321,8 +2321,7 @@ void WorksheetPrivate::loadXmlSheetData(QXmlStreamReader &reader)
                 QXmlStreamAttributes attributes = reader.attributes();
                 QString r                       = attributes.value(QLatin1String("r")).toString();
                 CellReference pos(r);
-                if (r.isEmpty())
-                {
+                if (r.isEmpty()) {
                     pos.setRow(row_num);
                     pos.setColumn(++col_num);
                 }
@@ -2444,6 +2443,48 @@ void WorksheetPrivate::loadXmlSheetData(QXmlStreamReader &reader)
                 }
 
                 cellTable[pos.row()][pos.column()] = cell;
+
+                if (cell->value().isNull()) {
+                    continue;
+                }
+
+                if (editRegions.empty()) {
+                    editRegions << CellRange{pos, pos};
+                } else {
+                    auto newRegion = false;
+                    auto cellRange = editRegions.last();
+
+                    // 跨多列
+                    if (pos.column() - cellRange.firstColumn() < -1 ||
+                        pos.column() - cellRange.lastColumn() > 1 || // 跨多列
+                        // 跨多行
+                        pos.row() - cellRange.lastRow() > 1) {
+                        newRegion = true;
+                        cellRange = {pos, pos};
+                    }
+
+                    if (pos.column() < cellRange.firstColumn()) {
+                        cellRange.setFirstColumn(pos.column());
+                    }
+
+                    if (pos.column() > cellRange.lastColumn()) {
+                        cellRange.setLastColumn(pos.column());
+                    }
+
+                    if (cellRange.lastRow() == pos.row() && cellRange.lastColumn() < pos.column()) {
+                        cellRange.setLastColumn(pos.column());
+                    }
+
+                    if (pos.row() > cellRange.lastRow()) {
+                        cellRange.setLastRow(pos.row());
+                    }
+
+                    if (newRegion) {
+                        editRegions << cellRange;
+                    } else {
+                        editRegions.last() = cellRange;
+                    }
+                }
             }
         }
     }
@@ -2908,6 +2949,12 @@ QVector<CellLocation> Worksheet::getFullCells(int *maxRow, int *maxCol)
     }
 
     return ret;
+}
+
+const QList<CellRange> &Worksheet::editRegion() const
+{
+    Q_D(const Worksheet);
+    return d->editRegions;
 }
 
 QT_END_NAMESPACE_XLSX

@@ -243,6 +243,9 @@ public:
 
 private:
     static double calculateColWidth(int characters);
+
+private:
+    QList<CellRange> editRegions;
 };
 
 QT_END_NAMESPACE_XLSX
